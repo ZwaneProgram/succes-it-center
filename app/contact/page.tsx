@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ArrowUpRight, MapPin, MessageCircle, Phone } from "lucide-react";
 
+import { FacebookMark } from "@/components/brand";
 import { ShopStatusPanel } from "@/components/contact/shop-status-panel";
 import { CONTACT, MAP_EMBED_URL, MAP_LINK_URL } from "@/lib/contact";
 
@@ -168,14 +169,5 @@ function ChannelCard({
         <ArrowUpRight className="size-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
       </span>
     </a>
-  );
-}
-
-/** lucide dropped brand glyphs, so the Facebook mark is inlined. */
-function FacebookMark() {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="size-5">
-      <path d="M13.5 21v-8h2.7l.4-3.1h-3.1V7.9c0-.9.25-1.45 1.55-1.45h1.65V3.68c-.29-.04-1.27-.12-2.42-.12-2.4 0-4.03 1.46-4.03 4.15V9.9H7.5V13h2.75v8h3.25Z" />
-    </svg>
   );
 }

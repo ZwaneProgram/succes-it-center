@@ -1,11 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, MessageCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { FacebookMark } from "@/components/brand";
 import { Badge } from "@/components/ui/badge";
 import { ProductCard } from "@/components/product-card";
 import { CategoryIcon } from "@/components/category-icon";
+import { CONTACT } from "@/lib/contact";
 import { bestSellers, getCategories, getProduct } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
@@ -101,13 +103,28 @@ export default async function HomePage() {
               </div>
             )}
 
-            {/* CTAs */}
+            {/* CTAs — the shop takes orders through LINE and Facebook, so the
+                hero points straight at them. */}
             <div className="flex flex-wrap justify-center gap-3 lg:absolute lg:bottom-2 lg:left-1/2 lg:z-[4] lg:-translate-x-1/2">
-              <Button asChild variant="gradient" size="pill">
-                <Link href="/products/1#ai-simulator">ทดลอง AI วางกล้อง</Link>
+              <Button asChild variant="line" size="pill">
+                <a
+                  href={CONTACT.lineUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <MessageCircle className="size-5" />
+                  แอด LINE ร้าน
+                </a>
               </Button>
-              <Button asChild variant="outline" size="pill">
-                <Link href="/products">เลือกซื้อสินค้า</Link>
+              <Button asChild variant="facebook" size="pill">
+                <a
+                  href={CONTACT.facebookUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <FacebookMark />
+                  Facebook
+                </a>
               </Button>
             </div>
           </div>
