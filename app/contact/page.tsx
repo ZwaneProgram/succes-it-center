@@ -32,8 +32,8 @@ export default function ContactPage() {
             คุยกับเราได้เลย
           </h1>
           <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
-            สอบถามสินค้า ขอใบเสนอราคา หรือนัดช่างเข้าไปดูหน้างาน
-            ทักมาช่องทางไหนก็ได้ที่สะดวก
+            หากลูกค้าสนใจในสินค้าของร้านเรา ต้องการสั่งซื้อสามารถ แอด LINE
+            ของร้านเราได้เลย
           </p>
         </header>
 
