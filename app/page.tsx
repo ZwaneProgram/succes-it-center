@@ -170,7 +170,9 @@ export default async function HomePage() {
       </section>
 
       {/* ================= CTA BANNER ================= */}
-      <section className="mx-auto max-w-[1240px] px-5 pb-16">
+      {/* pt matches the section rhythm above; the removed benefits strip used
+          to supply this breathing room. */}
+      <section className="mx-auto max-w-[1240px] px-5 pt-14 pb-16">
         <div className="relative flex flex-wrap items-center justify-between gap-6 overflow-hidden rounded-[22px] bg-[linear-gradient(120deg,#2F6BFF,#5EE7D3)] px-8 py-11">
           <div className="sv-dots-light absolute inset-0 opacity-50" />
           <div className="relative max-w-[560px] text-white">
