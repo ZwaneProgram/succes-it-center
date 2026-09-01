@@ -194,18 +194,20 @@ export default async function HomePage() {
           <div className="sv-dots-light absolute inset-0 opacity-50" />
           <div className="relative max-w-[560px] text-white">
             <h2 className="mb-2.5 text-[clamp(24px,3.4vw,34px)] font-bold tracking-tight">
-              เริ่มปกป้องบ้านและธุรกิจของคุณวันนี้
+              ลองวางกล้องในห้องคุณก่อนตัดสินใจซื้อ
             </h2>
             <p className="text-base leading-relaxed opacity-95">
-              ติดตั้งฟรีในเขต กทม. เมื่อซื้อครบ ฿2,000 รับประกันศูนย์ไทย 2 ปี
-              และใช้ AI วางกล้องให้แม่นยำก่อนตัดสินใจซื้อ
+              อัปโหลดรูปห้องของคุณ ให้ AI แนะนำจุดติดกล้องที่ครอบคลุมที่สุด
+              แล้วดูภาพจำลองก่อนจ่ายจริง
             </p>
           </div>
+          {/* The copy invites you to try the simulator, so the button goes
+              there rather than to the product list. */}
           <Button
             asChild
             className="relative h-[52px] rounded-2xl bg-white px-7 text-base text-ink shadow-[0_12px_30px_rgba(14,27,42,.22)] hover:bg-white"
           >
-            <Link href="/products">เลือกซื้อเลย</Link>
+            <Link href="/products/1#ai-simulator">ลองวางกล้องฟรี</Link>
           </Button>
         </div>
       </section>
