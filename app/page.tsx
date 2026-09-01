@@ -1,12 +1,11 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ProductCard } from "@/components/product-card";
 import { CategoryIcon } from "@/components/category-icon";
-import { BENEFITS } from "@/lib/products";
 import { bestSellers, getCategories, getProduct } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
@@ -166,25 +165,6 @@ export default async function HomePage() {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {best.map((p) => (
             <ProductCard key={p.id} product={p} />
-          ))}
-        </div>
-      </section>
-
-      {/* ================= BENEFITS ================= */}
-      <section className="mx-auto max-w-[1240px] px-5 py-12">
-        <div className="grid grid-cols-1 gap-5 rounded-[22px] border border-line bg-secondary p-7 shadow-[0_10px_30px_rgba(14,27,42,.06)] sm:grid-cols-2 lg:grid-cols-4">
-          {BENEFITS.map((b) => (
-            <div key={b.title} className="flex items-start gap-3.5">
-              <span className="flex size-[42px] shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#5EE7D3,#2F6BFF)]">
-                <ShieldCheck className="size-5 text-white" />
-              </span>
-              <div>
-                <div className="mb-1 text-[15px] font-bold">{b.title}</div>
-                <div className="text-[13px] leading-relaxed text-muted-foreground">
-                  {b.desc}
-                </div>
-              </div>
-            </div>
           ))}
         </div>
       </section>
