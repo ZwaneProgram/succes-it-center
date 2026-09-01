@@ -1,14 +1,31 @@
-import { Cctv, RadioTower, Siren, Fingerprint, HardDrive } from "lucide-react";
+import {
+  Bell,
+  Cable,
+  Cctv,
+  Fingerprint,
+  HardDrive,
+  Monitor,
+  RadioTower,
+  ShieldCheck,
+  Siren,
+  Wifi,
+} from "lucide-react";
 
-import type { CategoryDef } from "@/lib/products";
+import { DEFAULT_ICON } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 
+/** Keys here must stay in sync with CATEGORY_ICON_KEYS in lib/categories.ts. */
 const ICONS = {
   dome: Cctv,
   sensor: RadioTower,
   alarm: Siren,
   lock: Fingerprint,
   nvr: HardDrive,
+  wifi: Wifi,
+  bell: Bell,
+  monitor: Monitor,
+  cable: Cable,
+  shield: ShieldCheck,
 } as const;
 
 export function CategoryIcon({
@@ -17,12 +34,13 @@ export function CategoryIcon({
   className,
   size = 44,
 }: {
-  icon: CategoryDef["icon"];
+  icon: string;
   gradient: string;
   className?: string;
   size?: number;
 }) {
-  const Icon = ICONS[icon];
+  // Icons come from the DB, so an unknown key falls back instead of crashing.
+  const Icon = ICONS[icon as keyof typeof ICONS] ?? ICONS[DEFAULT_ICON];
   return (
     <span
       className={cn("flex items-center justify-center rounded-xl", className)}

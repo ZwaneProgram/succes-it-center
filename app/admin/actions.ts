@@ -9,7 +9,7 @@ import { auth } from "@/auth";
 import { deleteProductImage } from "@/lib/blob";
 import { prisma } from "@/lib/prisma";
 import { PRODUCTS_TAG } from "@/lib/queries";
-import { PRODUCT_TYPES, WARRANTY_UNITS, type ProductType } from "@/lib/products";
+import { WARRANTY_UNITS, type ProductType } from "@/lib/products";
 
 async function requireAdmin() {
   const session = await auth();
@@ -34,6 +34,12 @@ type ParsedProduct = {
   warrantyValue: number | null;
   warrantyUnit: string | null;
 };
+
+/** Categories are admin-managed rows now, so the slug is checked against the DB. */
+async function isKnownType(type: string): Promise<boolean> {
+  if (!type) return false;
+  return (await prisma.category.count({ where: { slug: type } })) > 0;
+}
 
 function parseProductForm(formData: FormData): ParsedProduct | { error: string } {
   const name = String(formData.get("name") ?? "").trim();
@@ -84,7 +90,6 @@ function parseProductForm(formData: FormData): ParsedProduct | { error: string }
 
   if (!name && !en)
     return { error: "กรุณากรอกชื่อสินค้าอย่างน้อย 1 ภาษา (ไทยหรืออังกฤษ)" };
-  if (!PRODUCT_TYPES.includes(type)) return { error: "ประเภทสินค้าไม่ถูกต้อง" };
   if (!Number.isFinite(price) || price < 0) return { error: "ราคาไม่ถูกต้อง" };
   if (oldPrice !== null && (!Number.isFinite(oldPrice) || oldPrice < 0))
     return { error: "ราคาเดิมไม่ถูกต้อง" };
@@ -140,6 +145,8 @@ function revalidateStorefront(id?: number) {
   revalidatePath("/products");
   if (id) revalidatePath(`/products/${id}`);
   revalidatePath("/admin");
+  // The category panel shows a per-category product count.
+  revalidatePath("/admin/categories");
 }
 
 export async function createProduct(
@@ -148,6 +155,8 @@ export async function createProduct(
   await requireAdmin();
   const parsed = parseProductForm(formData);
   if ("error" in parsed) return parsed;
+  if (!(await isKnownType(parsed.type)))
+    return { error: "ประเภทสินค้าไม่ถูกต้อง" };
 
   const urls = parseImageUrls(formData);
   if (!Array.isArray(urls)) return { error: urls.error };
@@ -171,6 +180,8 @@ export async function updateProduct(
   await requireAdmin();
   const parsed = parseProductForm(formData);
   if ("error" in parsed) return parsed;
+  if (!(await isKnownType(parsed.type)))
+    return { error: "ประเภทสินค้าไม่ถูกต้อง" };
 
   const existing = await prisma.product.findUnique({ where: { id } });
   if (!existing) return { error: "ไม่พบสินค้า" };

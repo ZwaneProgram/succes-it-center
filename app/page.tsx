@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ProductCard } from "@/components/product-card";
 import { CategoryIcon } from "@/components/category-icon";
-import { BENEFITS, CATEGORIES } from "@/lib/products";
-import { bestSellers } from "@/lib/queries";
+import { BENEFITS } from "@/lib/products";
+import { bestSellers, getCategories } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const best = await bestSellers(4);
+  const [best, categories] = await Promise.all([bestSellers(4), getCategories()]);
 
   return (
     <div className="animate-sv-fade">
@@ -104,10 +104,10 @@ export default async function HomePage() {
           </h2>
         </div>
         <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5">
-          {CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <Link
-              key={cat.key}
-              href={`/products?cat=${cat.key}`}
+              key={cat.slug}
+              href={`/products?cat=${encodeURIComponent(cat.slug)}`}
               className="rounded-2xl border border-line bg-secondary p-5 transition-all duration-200 hover:-translate-y-1 hover:border-brand-teal hover:shadow-[0_14px_30px_rgba(14,27,42,.09)]"
             >
               <CategoryIcon

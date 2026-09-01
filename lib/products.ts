@@ -1,24 +1,15 @@
 import type { Product as DbProduct } from "@prisma/client";
 import { formatBaht } from "@/lib/utils";
 
-export type ProductType = "cctv" | "sensor" | "alarm" | "lock" | "nvr";
+/**
+ * A product's category, stored as the `Category.slug` it belongs to. Categories
+ * are admin-managed rows now, so this is an open string rather than a union —
+ * see lib/categories.ts and /admin/categories.
+ */
+export type ProductType = string;
 
-export const PRODUCT_TYPES: ProductType[] = [
-  "cctv",
-  "sensor",
-  "alarm",
-  "lock",
-  "nvr",
-];
-
-/** Thai label for each product type (was previously stored per-row as typeLabel). */
-export const TYPE_LABEL: Record<ProductType, string> = {
-  cctv: "กล้องวงจรปิด",
-  sensor: "เซ็นเซอร์",
-  alarm: "สัญญาณกันขโมย",
-  lock: "สมาร์ทล็อค",
-  nvr: "ชุด NVR",
-};
+/** Slugs that ship with the app and have hand-written copy templates below. */
+export const BUILT_IN_TYPES = ["cctv", "sensor", "alarm", "lock", "nvr"] as const;
 
 /** Row shape consumed by the UI. `oldPrice`/`imageUrl` may be null in the DB. */
 export type Product = DbProduct;
@@ -65,7 +56,17 @@ export function warrantyLabel(p: DecoratedProduct): string | null {
   return `${p.warrantyValue} ${p.warrantyUnit ?? "ปี"}`;
 }
 
-export function decorate(p: Product): DecoratedProduct {
+/**
+ * Map a DB row to the shape the UI renders.
+ *
+ * `labels` maps a category slug to its Thai label (see `labelMap()` in
+ * lib/categories.ts). Callers that have no category list fall back to showing
+ * the raw slug.
+ */
+export function decorate(
+  p: Product,
+  labels: Record<string, string> = {}
+): DecoratedProduct {
   const type = p.type as ProductType;
   const old = p.oldPrice ?? p.price;
   const rawName = p.name?.trim() ?? "";
@@ -86,7 +87,7 @@ export function decorate(p: Product): DecoratedProduct {
     displayName: rawName || rawEn,
     subName: rawName && rawEn ? rawEn : null,
     type,
-    typeLabel: TYPE_LABEL[type] ?? p.type,
+    typeLabel: labels[type] ?? p.type,
     brand: p.brand,
     res: p.res,
     price: p.price,
@@ -147,6 +148,14 @@ export function productHighlights(p: DecoratedProduct): string[] {
         "ดูย้อนหลังจากมือถือได้ทุกที่ทุกเวลา",
         "พื้นที่จัดเก็บขนาดใหญ่ รองรับการบันทึกระยะยาว",
       ];
+    default:
+      // Admin-created category with no hand-written template.
+      return [
+        `${p.typeLabel}คุณภาพสูง คัดสรรมาเพื่อบ้านและธุรกิจในไทย`,
+        "ติดตั้งง่าย ใช้งานสะดวก พร้อมคู่มือภาษาไทย",
+        "รับประกันศูนย์ไทย พร้อมบริการหลังการขาย",
+        "ทีมช่างมืออาชีพพร้อมให้คำแนะนำก่อนและหลังติดตั้ง",
+      ];
   }
 }
 
@@ -163,6 +172,9 @@ export function productDesc(p: DecoratedProduct): string {
       return `${p.brand} ${p.name} สมาร์ทล็อคอัจฉริยะสำหรับการควบคุมการเข้าออก รองรับลายนิ้วมือ รหัส และแอปมือถือ ล็อกอัตโนมัติและแจ้งเตือนทุกครั้งที่มีการเปิดประตู เหมาะสำหรับบ้านพักและสำนักงาน`;
     case "nvr":
       return `${p.brand} ${p.name} ชุดบันทึกภาพ NVR ครบวงจร รองรับการบันทึกต่อเนื่อง 24 ชั่วโมงจากหลายกล้องพร้อมกัน พื้นที่จัดเก็บขนาดใหญ่และดูย้อนหลังผ่านมือถือได้ทุกที่ เหมาะสำหรับบ้าน ออฟฟิศ และห้างร้าน`;
+    default:
+      // Admin-created category with no hand-written template.
+      return `${p.brand} ${p.displayName} ${p.typeLabel}คุณภาพสูงจาก SUCCESS IT CENTER คัดสรรมาเพื่อบ้านและธุรกิจในประเทศไทย ติดตั้งง่าย ใช้งานสะดวก พร้อมรับประกันศูนย์ไทยและบริการหลังการขายจากทีมช่างมืออาชีพ`;
   }
 }
 
@@ -182,42 +194,6 @@ export function productSpecs(p: DecoratedProduct): { k: string; v: string }[] {
 
   return rows;
 }
-
-export interface CategoryDef {
-  key: ProductType;
-  th: string;
-  en: string;
-  gradient: string;
-  icon: "dome" | "sensor" | "alarm" | "lock" | "nvr";
-}
-
-export const CATEGORIES: CategoryDef[] = [
-  { key: "cctv", th: "กล้องวงจรปิด", en: "CCTV Cameras", gradient: "linear-gradient(135deg,#5EE7D3,#2F6BFF)", icon: "dome" },
-  { key: "sensor", th: "เซ็นเซอร์", en: "Sensors", gradient: "linear-gradient(135deg,#2F6BFF,#5EE7D3)", icon: "sensor" },
-  { key: "alarm", th: "สัญญาณกันขโมย", en: "Alarms", gradient: "linear-gradient(135deg,#5EE7D3,#2F6BFF)", icon: "alarm" },
-  { key: "lock", th: "สมาร์ทล็อค", en: "Smart Locks", gradient: "linear-gradient(135deg,#2F6BFF,#5EE7D3)", icon: "lock" },
-  { key: "nvr", th: "ชุด NVR", en: "NVR Kits", gradient: "linear-gradient(135deg,#5EE7D3,#2F6BFF)", icon: "nvr" },
-];
-
-export type FilterKey = "all" | ProductType;
-
-export const FILTERS: { k: FilterKey; l: string }[] = [
-  { k: "all", l: "ทั้งหมด" },
-  { k: "cctv", l: "กล้องวงจรปิด" },
-  { k: "sensor", l: "เซ็นเซอร์" },
-  { k: "alarm", l: "สัญญาณกันขโมย" },
-  { k: "lock", l: "สมาร์ทล็อค" },
-  { k: "nvr", l: "ชุด NVR" },
-];
-
-export const CATEGORY_META: Record<FilterKey, { title: string; sub: string }> = {
-  all: { title: "สินค้าทั้งหมด", sub: "อุปกรณ์รักษาความปลอดภัยครบวงจร คัดสรรคุณภาพสำหรับบ้านและธุรกิจ" },
-  cctv: { title: "กล้องวงจรปิด", sub: "กล้อง CCTV ความละเอียดสูง มองเห็นกลางคืน พร้อมฟีเจอร์ AI วางกล้อง" },
-  sensor: { title: "เซ็นเซอร์", sub: "เซ็นเซอร์ตรวจจับไร้สาย แจ้งเตือนทันทีเมื่อมีความเคลื่อนไหว" },
-  alarm: { title: "สัญญาณกันขโมย", sub: "ไซเรนและระบบแจ้งเตือนเสียงดัง ป้องกันการบุกรุก" },
-  lock: { title: "สมาร์ทล็อค", sub: "ล็อกอัจฉริยะ ปลดล็อกด้วยลายนิ้วมือและแอปพลิเคชัน" },
-  nvr: { title: "ชุด NVR", sub: "ชุดบันทึกภาพครบชุด พร้อมฮาร์ดดิสก์และการติดตั้ง" },
-};
 
 export type SortKey = "popular" | "low" | "high" | "rating";
 

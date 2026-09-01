@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { ProductForm } from "@/components/admin/product-form";
 import { updateProduct } from "@/app/admin/actions";
-import { getProduct } from "@/lib/queries";
+import { getCategories, getProduct } from "@/lib/queries";
 
 export default async function EditProductPage({
   params,
@@ -12,7 +12,10 @@ export default async function EditProductPage({
 }) {
   const { id } = await params;
   const productId = Number(id);
-  const product = await getProduct(productId);
+  const [product, categories] = await Promise.all([
+    getProduct(productId),
+    getCategories(),
+  ]);
   if (!product) notFound();
 
   const action = updateProduct.bind(null, productId);
@@ -25,7 +28,7 @@ export default async function EditProductPage({
         <span className="mx-1.5">/</span>
         <span className="truncate text-ink">แก้ไข · {product.displayName}</span>
       </nav>
-      <ProductForm product={product} action={action} />
+      <ProductForm product={product} categories={categories} action={action} />
     </div>
   );
 }

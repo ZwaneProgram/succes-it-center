@@ -8,9 +8,8 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { type CategoryDef } from "@/lib/categories";
 import {
-  PRODUCT_TYPES,
-  TYPE_LABEL,
   WARRANTY_UNITS,
   productSpecs,
   type DecoratedProduct,
@@ -46,9 +45,12 @@ type GalleryItem = { key: string; url: string; file?: File };
 
 export function ProductForm({
   product,
+  categories,
   action,
 }: {
   product?: DecoratedProduct;
+  /** Admin-managed categories (see /admin/categories) — fills the type select. */
+  categories: CategoryDef[];
   action: (formData: FormData) => Promise<{ error?: string }>;
 }) {
   const [pending, setPending] = React.useState(false);
@@ -188,21 +190,35 @@ export function ProductForm({
             </Field>
           </div>
           <Field label="ประเภท">
-            <div className="relative">
-              <select
-                name="type"
-                defaultValue={product?.type ?? "cctv"}
-                className={`${fieldCls} appearance-none pr-9`}
+            <div className="flex flex-col gap-1.5">
+              <div className="relative">
+                <select
+                  name="type"
+                  defaultValue={product?.type ?? categories[0]?.slug ?? ""}
+                  disabled={categories.length === 0}
+                  className={`${fieldCls} appearance-none pr-9 disabled:opacity-60`}
+                >
+                  {categories.length === 0 && (
+                    <option value="">— ยังไม่มีหมวดหมู่ —</option>
+                  )}
+                  {categories.map((c) => (
+                    <option key={c.slug} value={c.slug}>
+                      {c.th}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  ▾
+                </span>
+              </div>
+              <Link
+                href="/admin/categories"
+                className="self-start text-[12px] font-semibold text-brand-blue hover:underline"
               >
-                {PRODUCT_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {TYPE_LABEL[t]}
-                  </option>
-                ))}
-              </select>
-              <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground">
-                ▾
-              </span>
+                {categories.length === 0
+                  ? "สร้างหมวดหมู่แรกก่อน →"
+                  : "จัดการหมวดหมู่ →"}
+              </Link>
             </div>
           </Field>
           <Field label="ยี่ห้อ" hint="ไม่บังคับ">
