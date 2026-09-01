@@ -2,27 +2,30 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Package, Tags } from "lucide-react";
+import { ChartColumn, Package, Tags } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 const TABS = [
   { href: "/admin", label: "สินค้า", icon: Package },
   { href: "/admin/categories", label: "หมวดหมู่", icon: Tags },
+  { href: "/admin/analytics", label: "สถิติ", icon: ChartColumn },
 ];
 
 export function AdminTabs() {
   const pathname = usePathname();
 
+  // `/admin` is a prefix of every admin route, so the longest matching href
+  // wins — otherwise the products tab would light up on every sub-page.
+  const activeHref =
+    TABS.filter(
+      (t) => pathname === t.href || pathname.startsWith(`${t.href}/`)
+    ).sort((a, b) => b.href.length - a.href.length)[0]?.href ?? "/admin";
+
   return (
     <nav className="flex gap-1 rounded-xl border border-line bg-secondary p-1">
       {TABS.map((tab) => {
-        // /admin also covers /admin/new and /admin/[id]/edit; /admin/categories
-        // is the only other branch, so an exact-or-prefix check is enough.
-        const active =
-          tab.href === "/admin"
-            ? !pathname.startsWith("/admin/categories")
-            : pathname.startsWith(tab.href);
+        const active = tab.href === activeHref;
         return (
           <Link
             key={tab.href}

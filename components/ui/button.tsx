@@ -18,8 +18,9 @@ const buttonVariants = cva(
         soft: "border-[1.5px] border-line bg-white text-ink hover:border-brand-teal",
         accent: "bg-line-soft text-brand-blue hover:bg-line-soft/70",
         ghost: "text-ink hover:bg-accent hover:text-accent-foreground",
-        line: "bg-success-line text-white hover:brightness-105",
-        facebook: "bg-facebook text-white hover:brightness-105",
+        line: "bg-success-line text-white shadow-[0_14px_30px_rgba(6,199,85,.3)] hover:brightness-105",
+        facebook:
+          "bg-facebook text-white shadow-[0_14px_30px_rgba(24,119,242,.3)] hover:brightness-105",
         destructive:
           "bg-destructive text-white shadow-sm hover:bg-destructive/90",
         link: "text-brand-blue underline-offset-4 hover:underline",

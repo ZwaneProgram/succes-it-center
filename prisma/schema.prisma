@@ -53,6 +53,19 @@ model Product {
   cartItems CartItem[]
 }
 
+/// One row per page view from a real browser. `visitorId` is an opaque random
+/// UUID from a first-party cookie — never derived from IP or User-Agent, so no
+/// personal data is stored here.
+model PageView {
+  id        Int      @id @default(autoincrement())
+  visitorId String
+  path      String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([visitorId, createdAt])
+}
+
 model User {
   id           String     @id @default(cuid())
   email        String     @unique

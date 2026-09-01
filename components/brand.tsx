@@ -24,3 +24,17 @@ export function Logo({
     </Link>
   );
 }
+
+/** Facebook "f" mark — lucide dropped its brand glyphs, so it is inlined. */
+export function FacebookMark({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+      className={cn("size-5", className)}
+    >
+      <path d="M13.5 21v-8h2.7l.4-3.1h-3.1V7.9c0-.9.25-1.45 1.55-1.45h1.65V3.68c-.29-.04-1.27-.12-2.42-.12-2.4 0-4.03 1.46-4.03 4.15V9.9H7.5V13h2.75v8h3.25Z" />
+    </svg>
+  );
+}

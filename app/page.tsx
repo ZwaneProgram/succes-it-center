@@ -1,18 +1,36 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight, MessageCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { FacebookMark } from "@/components/brand";
 import { Badge } from "@/components/ui/badge";
 import { ProductCard } from "@/components/product-card";
 import { CategoryIcon } from "@/components/category-icon";
-import { BENEFITS } from "@/lib/products";
-import { bestSellers, getCategories } from "@/lib/queries";
+import { CONTACT } from "@/lib/contact";
+import { bestSellers, getCategories, getProduct } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * The hero shot is a pre-cut (background removed) copy of this product's own
+ * catalogue image, so the artwork and the floating card must stay in sync — if
+ * the product ever disappears we fall back to the top seller for the card copy.
+ */
+const HERO = {
+  productId: 3,
+  src: "/hero-hikvision-hybrid-light.png",
+  width: 857,
+  height: 431,
+};
+
 export default async function HomePage() {
-  const [best, categories] = await Promise.all([bestSellers(4), getCategories()]);
+  const [best, categories, heroProduct] = await Promise.all([
+    bestSellers(4),
+    getCategories(),
+    getProduct(HERO.productId),
+  ]);
+  const hero = heroProduct ?? best[0];
 
   return (
     <div className="animate-sv-fade">
@@ -41,52 +59,72 @@ export default async function HomePage() {
             {/* Camera visual */}
             <div className="relative z-[2] lg:absolute lg:top-[150px] lg:left-1/2 lg:-translate-x-1/2 lg:-rotate-4">
               <Image
-                src="/high-end-security-camera.png"
-                alt="SUCCESS IT Bullet Camera"
-                width={1500}
-                height={1125}
+                src={HERO.src}
+                alt={hero?.displayName ?? "กล้องวงจรปิด SUCCESS IT"}
+                width={HERO.width}
+                height={HERO.height}
                 priority
-                className="h-auto w-[min(600px,90vw)] drop-shadow-[0_30px_40px_rgba(14,27,42,.28)]"
+                className="h-auto w-[min(720px,92vw)] drop-shadow-[0_30px_40px_rgba(14,27,42,.28)]"
               />
             </div>
 
-            {/* Copy (left) */}
-            <div className="max-w-[248px] text-center lg:absolute lg:top-[52%] lg:left-0 lg:z-[3] lg:text-left">
+            {/* Copy (left) — desktop only; the mobile hero leads with the CTAs */}
+            <div className="hidden max-w-[248px] text-center lg:absolute lg:top-[52%] lg:left-0 lg:z-[3] lg:block lg:text-left">
               <p className="text-[15px] leading-relaxed text-muted-foreground">
                 ระบบรักษาความปลอดภัยอัจฉริยะ พร้อม AI ช่วยวางกล้องให้เหมาะกับบ้านและธุรกิจของคุณ
               </p>
             </div>
 
-            {/* Floating product card (right) */}
-            <div className="w-[212px] rounded-2xl border border-white/70 bg-white/85 p-[15px] shadow-[0_22px_46px_rgba(14,27,42,.18)] backdrop-blur-md lg:absolute lg:top-[30%] lg:right-0 lg:z-[3] lg:rotate-4">
-              <div className="mb-3 flex items-center justify-between">
-                <Badge variant="teal">ขายดี</Badge>
-                <span className="tracking-widest text-muted-foreground">⋯</span>
+            {/* Floating product card (right) — mirrors the camera in the hero shot */}
+            {hero && (
+              <div className="w-[212px] rounded-2xl border border-white/70 bg-white/85 p-[15px] shadow-[0_22px_46px_rgba(14,27,42,.18)] backdrop-blur-md lg:absolute lg:top-[30%] lg:right-0 lg:z-[3] lg:rotate-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <Badge variant="teal">ขายดี</Badge>
+                  <span className="tracking-widest text-muted-foreground">⋯</span>
+                </div>
+                <div className="mb-0.5 font-mono text-[11px] text-brand-blue">
+                  {hero.brand}
+                </div>
+                <div className="mb-2 line-clamp-2 text-[15px] leading-snug font-bold text-ink">
+                  {hero.displayName}
+                </div>
+                <div className="flex items-baseline justify-between">
+                  <div className="text-xl font-bold text-ink">
+                    {hero.priceLabel}
+                  </div>
+                  <Link
+                    href={`/products/${hero.id}`}
+                    aria-label={`ดูรายละเอียด ${hero.displayName}`}
+                    className="flex size-[34px] items-center justify-center rounded-[10px] bg-ink text-white"
+                  >
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </div>
               </div>
-              <div className="mb-0.5 font-mono text-[11px] text-brand-blue">
-                SUCCESS IT
-              </div>
-              <div className="mb-2 text-[15px] leading-snug font-bold text-ink">
-                กล้อง Bullet กันน้ำ 5MP
-              </div>
-              <div className="flex items-baseline justify-between">
-                <div className="text-xl font-bold text-ink">฿1,890</div>
-                <Link
-                  href="/products/2"
-                  className="flex size-[34px] items-center justify-center rounded-[10px] bg-ink text-white"
-                >
-                  <ArrowRight className="size-4" />
-                </Link>
-              </div>
-            </div>
+            )}
 
-            {/* CTAs */}
+            {/* CTAs — the shop takes orders through LINE and Facebook, so the
+                hero points straight at them. */}
             <div className="flex flex-wrap justify-center gap-3 lg:absolute lg:bottom-2 lg:left-1/2 lg:z-[4] lg:-translate-x-1/2">
-              <Button asChild variant="gradient" size="pill">
-                <Link href="/products/1#ai-simulator">ทดลอง AI วางกล้อง</Link>
+              <Button asChild variant="line" size="pill">
+                <a
+                  href={CONTACT.lineUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <MessageCircle className="size-5" />
+                  แอด LINE ร้าน
+                </a>
               </Button>
-              <Button asChild variant="outline" size="pill">
-                <Link href="/products">เลือกซื้อสินค้า</Link>
+              <Button asChild variant="facebook" size="pill">
+                <a
+                  href={CONTACT.facebookUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <FacebookMark />
+                  Facebook
+                </a>
               </Button>
             </div>
           </div>
@@ -148,43 +186,28 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ================= BENEFITS ================= */}
-      <section className="mx-auto max-w-[1240px] px-5 py-12">
-        <div className="grid grid-cols-1 gap-5 rounded-[22px] border border-line bg-secondary p-7 shadow-[0_10px_30px_rgba(14,27,42,.06)] sm:grid-cols-2 lg:grid-cols-4">
-          {BENEFITS.map((b) => (
-            <div key={b.title} className="flex items-start gap-3.5">
-              <span className="flex size-[42px] shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#5EE7D3,#2F6BFF)]">
-                <ShieldCheck className="size-5 text-white" />
-              </span>
-              <div>
-                <div className="mb-1 text-[15px] font-bold">{b.title}</div>
-                <div className="text-[13px] leading-relaxed text-muted-foreground">
-                  {b.desc}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* ================= CTA BANNER ================= */}
-      <section className="mx-auto max-w-[1240px] px-5 pb-16">
+      {/* pt matches the section rhythm above; the removed benefits strip used
+          to supply this breathing room. */}
+      <section className="mx-auto max-w-[1240px] px-5 pt-14 pb-16">
         <div className="relative flex flex-wrap items-center justify-between gap-6 overflow-hidden rounded-[22px] bg-[linear-gradient(120deg,#2F6BFF,#5EE7D3)] px-8 py-11">
           <div className="sv-dots-light absolute inset-0 opacity-50" />
           <div className="relative max-w-[560px] text-white">
             <h2 className="mb-2.5 text-[clamp(24px,3.4vw,34px)] font-bold tracking-tight">
-              เริ่มปกป้องบ้านและธุรกิจของคุณวันนี้
+              ลองวางกล้องในห้องคุณก่อนตัดสินใจซื้อ
             </h2>
             <p className="text-base leading-relaxed opacity-95">
-              ติดตั้งฟรีในเขต กทม. เมื่อซื้อครบ ฿2,000 รับประกันศูนย์ไทย 2 ปี
-              และใช้ AI วางกล้องให้แม่นยำก่อนตัดสินใจซื้อ
+              อัปโหลดรูปห้องของคุณ ให้ AI แนะนำจุดติดกล้องที่ครอบคลุมที่สุด
+              แล้วดูภาพจำลองก่อนจ่ายจริง
             </p>
           </div>
+          {/* The copy invites you to try the simulator, so the button goes
+              there rather than to the product list. */}
           <Button
             asChild
             className="relative h-[52px] rounded-2xl bg-white px-7 text-base text-ink shadow-[0_12px_30px_rgba(14,27,42,.22)] hover:bg-white"
           >
-            <Link href="/products">เลือกซื้อเลย</Link>
+            <Link href="/products/1#ai-simulator">ลองวางกล้องฟรี</Link>
           </Button>
         </div>
       </section>

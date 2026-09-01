@@ -92,8 +92,16 @@ export function CartDrawer() {
                 <span>รวมทั้งหมด</span>
                 <span>{totalLabel}</span>
               </div>
-              <Button variant="gradient" size="lg" className="w-full">
-                สั่งซื้อสินค้า
+              <Button
+                variant="gradient"
+                size="lg"
+                className="w-full"
+                onClick={() => {
+                  setOpen(false);
+                  router.push("/contact");
+                }}
+              >
+                ติดต่อเราเพื่อสั่งซื้อ
               </Button>
             </div>
           </>

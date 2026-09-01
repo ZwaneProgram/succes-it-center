@@ -1,14 +1,19 @@
-import { CONTACT } from "@/lib/contact";
+import Link from "next/link";
+import { Phone } from "lucide-react";
 
-const PRODUCT_LINKS = [
-  { label: "กล้องวงจรปิด", cat: "cctv" },
-  { label: "เซ็นเซอร์", cat: "sensor" },
-  { label: "สัญญาณกันขโมย", cat: "alarm" },
-  { label: "สมาร์ทล็อค", cat: "lock" },
-  { label: "ชุด NVR", cat: "nvr" },
-];
+import { FacebookMark } from "@/components/brand";
+import { CONTACT, HOURS_ROWS } from "@/lib/contact";
+import { formatMinutes } from "@/lib/opening-hours";
+import { getCategories } from "@/lib/queries";
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  // Read from the database rather than a hardcoded list — the previous one had
+  // gone stale and four of its five links pointed at categories that no longer
+  // exist, landing visitors on an empty product page.
+  // Capped at five to keep the column short; `sort` is admin-controlled, so
+  // reordering categories decides which five appear here.
+  const categories = (await getCategories()).slice(0, 5);
+
   return (
     <footer className="mt-5 bg-ink text-white">
       <div className="mx-auto grid max-w-[1240px] grid-cols-1 gap-8 px-5 py-12 sm:grid-cols-2 lg:grid-cols-3">
@@ -20,59 +25,85 @@ export function SiteFooter() {
             <span className="text-lg font-bold">SUCCESS IT CENTER</span>
           </div>
           <p className="mb-4 max-w-[260px] text-sm leading-relaxed text-white/60">
-            ระบบรักษาความปลอดภัยอัจฉริยะสำหรับบ้านและธุรกิจ พร้อมฟีเจอร์ AI
-            ช่วยวางกล้อง
+            จำหน่ายและติดตั้งกล้องวงจรปิด ระบบควบคุมประตู
+            และอุปกรณ์รักษาความปลอดภัย โดยทีมช่างในเชียงใหม่
           </p>
           <div className="flex gap-2.5">
             <a
               href={CONTACT.facebookUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex size-[42px] items-center justify-center rounded-[11px] bg-white/10 font-bold"
+              aria-label={`Facebook ${CONTACT.facebookName}`}
+              className="flex size-[42px] items-center justify-center rounded-[11px] bg-facebook text-white transition-[filter] hover:brightness-105"
             >
-              f
+              <FacebookMark />
             </a>
-            <a
-              href={CONTACT.lineUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex h-[42px] items-center rounded-[11px] bg-success-line px-4 font-semibold"
+            {/* Sends people to the contact page rather than straight into LINE,
+                so every channel is on offer at once. */}
+            <Link
+              href="/contact"
+              className="flex h-[42px] items-center rounded-[11px] bg-success-line px-4 font-semibold transition-[filter] hover:brightness-105"
             >
-              LINE @successit
-            </a>
+              LINE {CONTACT.lineId}
+            </Link>
           </div>
         </div>
 
         <div>
           <div className="mb-3.5 text-[15px] font-bold">สินค้า</div>
           <div className="flex flex-col gap-2.5 text-sm text-white/60">
-            {PRODUCT_LINKS.map((l) => (
-              <a
-                key={l.cat}
-                href={`/products?cat=${l.cat}`}
-                className="hover:text-white"
+            {categories.map((c) => (
+              <Link
+                key={c.slug}
+                href={`/products?cat=${encodeURIComponent(c.slug)}`}
+                className="transition-colors hover:text-white"
               >
-                {l.label}
-              </a>
+                {c.th}
+              </Link>
             ))}
           </div>
         </div>
 
         <div>
-          <div className="mb-3.5 text-[15px] font-bold">
-            รับข่าวสาร &amp; โปรโมชั่น
-          </div>
-          <p className="mb-3 text-sm text-white/60">
-            เพิ่มเราเป็นเพื่อนใน LINE รับส่วนลดพิเศษ
-          </p>
+          <div className="mb-3.5 text-[15px] font-bold">ติดต่อร้าน</div>
+
           <a
-            href={CONTACT.lineUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex h-[46px] items-center justify-center rounded-xl bg-success-line font-bold text-white"
+            href={CONTACT.phoneHref}
+            className="inline-flex items-center gap-2.5 transition-colors hover:text-brand-teal"
           >
-            เพิ่มเพื่อนใน LINE
+            <Phone className="size-[18px] shrink-0" />
+            <span className="font-mono text-[19px] font-bold tabular-nums">
+              {CONTACT.phoneDisplay}
+            </span>
           </a>
+
+          <address className="mt-2.5 text-sm leading-relaxed text-white/60 not-italic">
+            {CONTACT.addressLines.map((line) => (
+              <span key={line} className="block">
+                {line}
+              </span>
+            ))}
+          </address>
+
+          <dl className="mt-3 flex flex-col gap-1 text-[13px] text-white/60">
+            {HOURS_ROWS.map((row) => (
+              <div key={row.label} className="flex justify-between gap-4">
+                <dt>{row.label}</dt>
+                <dd className="font-mono tabular-nums">
+                  {row.hours
+                    ? `${formatMinutes(row.hours.open)} – ${formatMinutes(row.hours.close)}`
+                    : "หยุด"}
+                </dd>
+              </div>
+            ))}
+          </dl>
+
+          <Link
+            href="/contact"
+            className="mt-4 flex h-[46px] items-center justify-center rounded-xl border border-white/15 bg-white/10 font-bold text-white transition-colors hover:bg-white/20"
+          >
+            ติดต่อเรา
+          </Link>
         </div>
       </div>
 
