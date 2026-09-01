@@ -3,6 +3,14 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+const CATEGORIES = [
+  { slug: "cctv",   th: "กล้องวงจรปิด", en: "CCTV Cameras", icon: "dome",   gradient: "linear-gradient(135deg,#5EE7D3,#2F6BFF)", sub: "กล้อง CCTV ความละเอียดสูง มองเห็นกลางคืน พร้อมฟีเจอร์ AI วางกล้อง", sort: 0 },
+  { slug: "sensor", th: "เซ็นเซอร์", en: "Sensors", icon: "sensor", gradient: "linear-gradient(135deg,#2F6BFF,#5EE7D3)", sub: "เซ็นเซอร์ตรวจจับไร้สาย แจ้งเตือนทันทีเมื่อมีความเคลื่อนไหว", sort: 1 },
+  { slug: "alarm",  th: "สัญญาณกันขโมย", en: "Alarms", icon: "alarm", gradient: "linear-gradient(135deg,#5EE7D3,#2F6BFF)", sub: "ไซเรนและระบบแจ้งเตือนเสียงดัง ป้องกันการบุกรุก", sort: 2 },
+  { slug: "lock",   th: "สมาร์ทล็อค", en: "Smart Locks", icon: "lock", gradient: "linear-gradient(135deg,#2F6BFF,#5EE7D3)", sub: "ล็อกอัจฉริยะ ปลดล็อกด้วยลายนิ้วมือและแอพพลิเคชัน", sort: 3 },
+  { slug: "nvr",    th: "ชุด NVR", en: "NVR Kits", icon: "nvr", gradient: "linear-gradient(135deg,#5EE7D3,#2F6BFF)", sub: "ชุดบันทึกภาพครบชุด พร้อมฮาร์ดดิสก์และการติดตั้ง", sort: 4 },
+];
+
 const PRODUCTS = [
   { id: 1, name: "กล้องโดม SUCCESS IT 4MP", en: "Dome Camera 4MP", type: "cctv", brand: "SUCCESS IT", res: "4MP", price: 1290, oldPrice: 1690, rating: 4.8, reviews: 212, ai: true },
   { id: 2, name: "กล้อง Bullet กันน้ำ 5MP", en: "Bullet Outdoor 5MP", type: "cctv", brand: "HikPro", res: "5MP", price: 1890, oldPrice: 2290, rating: 4.7, reviews: 158, ai: true },
@@ -15,6 +23,15 @@ const PRODUCTS = [
 ];
 
 async function main() {
+  // Categories first: Product.type stores a Category.slug.
+  for (const c of CATEGORIES) {
+    await prisma.category.upsert({
+      where: { slug: c.slug },
+      update: c,
+      create: c,
+    });
+  }
+
   for (const p of PRODUCTS) {
     await prisma.product.upsert({
       where: { id: p.id },
@@ -42,7 +59,9 @@ async function main() {
     `SELECT setval(pg_get_serial_sequence('"Product"', 'id'), (SELECT MAX(id) FROM "Product"))`
   );
 
-  console.log(`Seeded ${PRODUCTS.length} products.`);
+  console.log(
+    `Seeded ${CATEGORIES.length} categories and ${PRODUCTS.length} products.`
+  );
 }
 
 main()

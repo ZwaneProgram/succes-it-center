@@ -13,11 +13,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  CATEGORY_META,
-  FILTERS,
+  ALL_FILTER,
+  categoryMeta,
+  filtersFrom,
+  type CategoryDef,
+  type FilterKey,
+} from "@/lib/categories";
+import {
   sortProducts,
   type DecoratedProduct,
-  type FilterKey,
   type SortKey,
 } from "@/lib/products";
 import { cn } from "@/lib/utils";
@@ -32,10 +36,13 @@ export function ListingView({
   initialFilter,
   products: initialProducts,
   counts,
+  categories,
 }: {
   initialFilter: FilterKey;
   products: DecoratedProduct[];
   counts: Record<string, number>;
+  /** Admin-managed categories — drives the sidebar filters and the hero copy. */
+  categories: CategoryDef[];
 }) {
   const [filter, setFilter] = React.useState<FilterKey>(initialFilter);
   const [sort, setSort] = React.useState<SortKey>("popular");
@@ -49,12 +56,13 @@ export function ListingView({
   // Any change to the result set sends the user back to the first page.
   React.useEffect(() => setPage(1), [filter, sort, price]);
 
-  const meta = CATEGORY_META[filter] ?? CATEGORY_META.all;
+  const filters = React.useMemo(() => filtersFrom(categories), [categories]);
+  const meta = categoryMeta(categories, filter);
 
   const products = React.useMemo(() => {
     const base = initialProducts.filter(
       (p) =>
-        (filter === "all" || p.type === filter) &&
+        (filter === ALL_FILTER || p.type === filter) &&
         p.price >= price[0] &&
         p.price <= price[1]
     );
@@ -116,7 +124,7 @@ export function ListingView({
               ประเภทสินค้า
             </div>
             <div className="mb-5 flex flex-col gap-0.5">
-              {FILTERS.map((t) => (
+              {filters.map((t) => (
                 <button
                   key={t.k}
                   onClick={() => setFilter(t.k)}

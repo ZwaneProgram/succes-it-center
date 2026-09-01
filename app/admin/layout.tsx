@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { auth } from "@/auth";
+import { AdminTabs } from "@/components/admin/admin-tabs";
 
 export default async function AdminLayout({
   children,
@@ -26,7 +27,7 @@ export default async function AdminLayout({
               ผู้ดูแลระบบ · Admin
             </span>
             <h1 className="mt-1.5 font-sans text-[26px] font-bold leading-tight">
-              จัดการสินค้า
+              จัดการร้านค้า
             </h1>
             {session.user?.email && (
               <p className="mt-1 text-sm text-white/55">
@@ -42,6 +43,10 @@ export default async function AdminLayout({
             กลับหน้าร้าน
           </Link>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <AdminTabs />
       </div>
 
       <div className="mt-6">{children}</div>
