@@ -9,10 +9,9 @@ import { cn } from "@/lib/utils";
 /**
  * The page's centrepiece: a live readout of whether the shop is open right now.
  *
- * It answers the question a customer actually has before they call, and a live
- * status board is the native idiom for a security shop. `initialNow` comes from
- * the server so the first paint is already correct and matches on hydration;
- * the interval only keeps it honest afterwards.
+ * It answers the question a customer actually has before they call. `initialNow`
+ * comes from the server so the first paint is already correct and matches on
+ * hydration; the interval only keeps it honest afterwards.
  */
 export function ShopStatusPanel({ initialNow }: { initialNow: number }) {
   const [now, setNow] = React.useState(initialNow);
@@ -26,38 +25,45 @@ export function ShopStatusPanel({ initialNow }: { initialNow: number }) {
   const { isOpen, today, nextOpening } = status;
 
   return (
-    <div className="sv-dots-light relative overflow-hidden rounded-[22px] bg-ink text-white shadow-[0_18px_40px_rgba(14,27,42,.22)]">
-      <div className="relative p-6">
-        <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.16em] text-white/45">
+    <div className="overflow-hidden rounded-[22px] border border-line bg-card shadow-[0_10px_30px_rgba(14,27,42,.06)]">
+      {/* The banner carries the state: a green wash when the shop is open, a
+          quiet neutral one when it is not. */}
+      <div
+        className={cn(
+          "sv-dots relative border-b border-line p-6 transition-colors",
+          isOpen ? "bg-emerald-50" : "bg-surface"
+        )}
+      >
+        <div className="flex items-center gap-2 text-[11px] font-bold tracking-[.16em] text-muted-foreground uppercase">
           <span className="relative flex size-2">
             {isOpen && (
-              <span className="absolute inline-flex size-2 animate-sv-ping rounded-full bg-brand-teal motion-reduce:animate-none" />
+              <span className="absolute inline-flex size-2 animate-sv-ping rounded-full bg-emerald-500 motion-reduce:animate-none" />
             )}
             <span
               className={cn(
                 "relative inline-flex size-2 rounded-full",
-                isOpen ? "bg-brand-teal" : "bg-white/30"
+                isOpen ? "bg-emerald-500" : "bg-muted-ink/35"
               )}
             />
           </span>
           สถานะร้าน
         </div>
 
-        <div className="mt-3 flex items-baseline gap-3">
+        <div className="mt-2.5 flex items-baseline gap-3">
           <span
             className={cn(
-              "font-sans text-[34px] leading-none font-bold tracking-tight",
-              isOpen ? "text-brand-teal" : "text-white"
+              "text-[34px] leading-none font-bold tracking-tight",
+              isOpen ? "text-emerald-600" : "text-ink"
             )}
           >
             {isOpen ? "เปิดอยู่" : "ปิดอยู่"}
           </span>
-          <span className="font-mono text-[15px] tabular-nums text-white/45">
+          <span className="font-mono text-[15px] tabular-nums text-muted-foreground">
             {formatMinutes(status.minutesNow)} น.
           </span>
         </div>
 
-        <p className="mt-2 text-[13px] leading-relaxed text-white/60">
+        <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
           {isOpen && today
             ? `วันนี้เปิดถึง ${formatMinutes(today.close)} น.`
             : nextOpening
@@ -66,8 +72,8 @@ export function ShopStatusPanel({ initialNow }: { initialNow: number }) {
         </p>
       </div>
 
-      <div className="relative border-t border-white/10 p-6 pt-5">
-        <div className="mb-3 text-[11px] font-bold uppercase tracking-[.16em] text-white/45">
+      <div className="p-6 pt-5">
+        <div className="mb-3 text-[11px] font-bold tracking-[.16em] text-muted-foreground uppercase">
           เวลาทำการ
         </div>
         <dl className="flex flex-col gap-0.5">
@@ -79,14 +85,18 @@ export function ShopStatusPanel({ initialNow }: { initialNow: number }) {
               <div
                 key={row.label}
                 className={cn(
-                  "flex items-center justify-between rounded-lg px-2.5 py-2 text-[13px] transition-colors",
-                  isToday ? "bg-white/10" : "text-white/70"
+                  "flex items-center justify-between rounded-lg px-2.5 py-2 text-[13px]",
+                  isToday ? "bg-accent" : ""
                 )}
               >
-                <dt className={cn(isToday && "font-semibold text-white")}>
+                <dt
+                  className={cn(
+                    isToday ? "font-semibold text-ink" : "text-muted-foreground"
+                  )}
+                >
                   {row.label}
                   {isToday && (
-                    <span className="ml-2 text-[11px] font-normal text-brand-teal">
+                    <span className="ml-2 text-[11px] font-semibold text-brand-blue">
                       วันนี้
                     </span>
                   )}
@@ -96,9 +106,9 @@ export function ShopStatusPanel({ initialNow }: { initialNow: number }) {
                     "font-mono text-[13px] tabular-nums",
                     row.hours
                       ? isToday
-                        ? "font-semibold text-white"
-                        : "text-white/70"
-                      : "text-white/35"
+                        ? "font-semibold text-ink"
+                        : "text-muted-foreground"
+                      : "text-muted-ink/50"
                   )}
                 >
                   {row.hours

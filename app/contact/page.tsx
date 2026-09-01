@@ -81,8 +81,9 @@ export default function ContactPage() {
             </div>
           </div>
 
-          {/* Side column — the live status board. */}
-          <div className="lg:sticky lg:top-6 lg:col-start-2 lg:row-span-2">
+          {/* Side column — the live status board. Deliberately not sticky; it
+              stays put as the page scrolls. */}
+          <div className="lg:col-start-2 lg:row-span-2">
             <ShopStatusPanel initialNow={initialNow} />
           </div>
 
