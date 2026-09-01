@@ -7,12 +7,29 @@ import { Badge } from "@/components/ui/badge";
 import { ProductCard } from "@/components/product-card";
 import { CategoryIcon } from "@/components/category-icon";
 import { BENEFITS } from "@/lib/products";
-import { bestSellers, getCategories } from "@/lib/queries";
+import { bestSellers, getCategories, getProduct } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * The hero shot is a pre-cut (background removed) copy of this product's own
+ * catalogue image, so the artwork and the floating card must stay in sync — if
+ * the product ever disappears we fall back to the top seller for the card copy.
+ */
+const HERO = {
+  productId: 3,
+  src: "/hero-hikvision-hybrid-light.png",
+  width: 857,
+  height: 431,
+};
+
 export default async function HomePage() {
-  const [best, categories] = await Promise.all([bestSellers(4), getCategories()]);
+  const [best, categories, heroProduct] = await Promise.all([
+    bestSellers(4),
+    getCategories(),
+    getProduct(HERO.productId),
+  ]);
+  const hero = heroProduct ?? best[0];
 
   return (
     <div className="animate-sv-fade">
@@ -41,44 +58,49 @@ export default async function HomePage() {
             {/* Camera visual */}
             <div className="relative z-[2] lg:absolute lg:top-[150px] lg:left-1/2 lg:-translate-x-1/2 lg:-rotate-4">
               <Image
-                src="/high-end-security-camera.png"
-                alt="SUCCESS IT Bullet Camera"
-                width={1500}
-                height={1125}
+                src={HERO.src}
+                alt={hero?.displayName ?? "กล้องวงจรปิด SUCCESS IT"}
+                width={HERO.width}
+                height={HERO.height}
                 priority
-                className="h-auto w-[min(600px,90vw)] drop-shadow-[0_30px_40px_rgba(14,27,42,.28)]"
+                className="h-auto w-[min(720px,92vw)] drop-shadow-[0_30px_40px_rgba(14,27,42,.28)]"
               />
             </div>
 
-            {/* Copy (left) */}
-            <div className="max-w-[248px] text-center lg:absolute lg:top-[52%] lg:left-0 lg:z-[3] lg:text-left">
+            {/* Copy (left) — desktop only; the mobile hero leads with the CTAs */}
+            <div className="hidden max-w-[248px] text-center lg:absolute lg:top-[52%] lg:left-0 lg:z-[3] lg:block lg:text-left">
               <p className="text-[15px] leading-relaxed text-muted-foreground">
                 ระบบรักษาความปลอดภัยอัจฉริยะ พร้อม AI ช่วยวางกล้องให้เหมาะกับบ้านและธุรกิจของคุณ
               </p>
             </div>
 
-            {/* Floating product card (right) */}
-            <div className="w-[212px] rounded-2xl border border-white/70 bg-white/85 p-[15px] shadow-[0_22px_46px_rgba(14,27,42,.18)] backdrop-blur-md lg:absolute lg:top-[30%] lg:right-0 lg:z-[3] lg:rotate-4">
-              <div className="mb-3 flex items-center justify-between">
-                <Badge variant="teal">ขายดี</Badge>
-                <span className="tracking-widest text-muted-foreground">⋯</span>
+            {/* Floating product card (right) — mirrors the camera in the hero shot */}
+            {hero && (
+              <div className="w-[212px] rounded-2xl border border-white/70 bg-white/85 p-[15px] shadow-[0_22px_46px_rgba(14,27,42,.18)] backdrop-blur-md lg:absolute lg:top-[30%] lg:right-0 lg:z-[3] lg:rotate-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <Badge variant="teal">ขายดี</Badge>
+                  <span className="tracking-widest text-muted-foreground">⋯</span>
+                </div>
+                <div className="mb-0.5 font-mono text-[11px] text-brand-blue">
+                  {hero.brand}
+                </div>
+                <div className="mb-2 line-clamp-2 text-[15px] leading-snug font-bold text-ink">
+                  {hero.displayName}
+                </div>
+                <div className="flex items-baseline justify-between">
+                  <div className="text-xl font-bold text-ink">
+                    {hero.priceLabel}
+                  </div>
+                  <Link
+                    href={`/products/${hero.id}`}
+                    aria-label={`ดูรายละเอียด ${hero.displayName}`}
+                    className="flex size-[34px] items-center justify-center rounded-[10px] bg-ink text-white"
+                  >
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </div>
               </div>
-              <div className="mb-0.5 font-mono text-[11px] text-brand-blue">
-                SUCCESS IT
-              </div>
-              <div className="mb-2 text-[15px] leading-snug font-bold text-ink">
-                กล้อง Bullet กันน้ำ 5MP
-              </div>
-              <div className="flex items-baseline justify-between">
-                <div className="text-xl font-bold text-ink">฿1,890</div>
-                <Link
-                  href="/products/2"
-                  className="flex size-[34px] items-center justify-center rounded-[10px] bg-ink text-white"
-                >
-                  <ArrowRight className="size-4" />
-                </Link>
-              </div>
-            </div>
+            )}
 
             {/* CTAs */}
             <div className="flex flex-wrap justify-center gap-3 lg:absolute lg:bottom-2 lg:left-1/2 lg:z-[4] lg:-translate-x-1/2">
