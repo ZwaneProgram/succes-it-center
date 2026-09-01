@@ -26,50 +26,54 @@ export function ShopStatusPanel({ initialNow }: { initialNow: number }) {
 
   return (
     <div className="overflow-hidden rounded-[22px] border border-line bg-card shadow-[0_10px_30px_rgba(14,27,42,.06)]">
-      {/* The banner carries the state: a green wash when the shop is open, a
-          quiet neutral one when it is not. */}
-      <div
-        className={cn(
-          "sv-dots relative border-b border-line p-6 transition-colors",
-          isOpen ? "bg-emerald-50" : "bg-surface"
-        )}
-      >
-        <div className="flex items-center gap-2 text-[11px] font-bold tracking-[.16em] text-muted-foreground uppercase">
-          <span className="relative flex size-2">
-            {isOpen && (
-              <span className="absolute inline-flex size-2 animate-sv-ping rounded-full bg-emerald-500 motion-reduce:animate-none" />
-            )}
+      {/* Deep blue banner; the state reads through the heading and the dot —
+          brand teal when the shop is open, plain white when it is not. */}
+      <div className="sv-dots-light relative overflow-hidden bg-ink p-6">
+        {/* Blue glow so the panel reads as navy rather than near-black,
+            echoing the radial washes used on the storefront hero. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(125%_150%_at_88%_-25%,rgba(47,107,255,.62),rgba(47,107,255,.16)_45%,transparent_70%)]"
+        />
+
+        <div className="relative">
+          <div className="flex items-center gap-2 text-[11px] font-bold tracking-[.16em] text-white/50 uppercase">
+            <span className="relative flex size-2">
+              {isOpen && (
+                <span className="absolute inline-flex size-2 animate-sv-ping rounded-full bg-brand-teal motion-reduce:animate-none" />
+              )}
+              <span
+                className={cn(
+                  "relative inline-flex size-2 rounded-full",
+                  isOpen ? "bg-brand-teal" : "bg-white/35"
+                )}
+              />
+            </span>
+            สถานะร้าน
+          </div>
+
+          <div className="mt-2.5 flex items-baseline gap-3">
             <span
               className={cn(
-                "relative inline-flex size-2 rounded-full",
-                isOpen ? "bg-emerald-500" : "bg-muted-ink/35"
+                "text-[34px] leading-none font-bold tracking-tight",
+                isOpen ? "text-brand-teal" : "text-white"
               )}
-            />
-          </span>
-          สถานะร้าน
-        </div>
+            >
+              {isOpen ? "เปิดอยู่" : "ปิดอยู่"}
+            </span>
+            <span className="font-mono text-[15px] tabular-nums text-white/55">
+              {formatMinutes(status.minutesNow)} น.
+            </span>
+          </div>
 
-        <div className="mt-2.5 flex items-baseline gap-3">
-          <span
-            className={cn(
-              "text-[34px] leading-none font-bold tracking-tight",
-              isOpen ? "text-emerald-600" : "text-ink"
-            )}
-          >
-            {isOpen ? "เปิดอยู่" : "ปิดอยู่"}
-          </span>
-          <span className="font-mono text-[15px] tabular-nums text-muted-foreground">
-            {formatMinutes(status.minutesNow)} น.
-          </span>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-white/65">
+            {isOpen && today
+              ? `วันนี้เปิดถึง ${formatMinutes(today.close)} น.`
+              : nextOpening
+                ? `เปิดอีกครั้ง ${whenLabel(nextOpening.daysAhead, nextOpening.weekday)} ${formatMinutes(nextOpening.minutes)} น.`
+                : "ดูเวลาทำการด้านล่าง"}
+          </p>
         </div>
-
-        <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
-          {isOpen && today
-            ? `วันนี้เปิดถึง ${formatMinutes(today.close)} น.`
-            : nextOpening
-              ? `เปิดอีกครั้ง ${whenLabel(nextOpening.daysAhead, nextOpening.weekday)} ${formatMinutes(nextOpening.minutes)} น.`
-              : "ดูเวลาทำการด้านล่าง"}
-        </p>
       </div>
 
       <div className="p-6 pt-5">
