@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Phone } from "lucide-react";
 
 import { FacebookMark } from "@/components/brand";
 import { CONTACT, HOURS_ROWS } from "@/lib/contact";
@@ -68,9 +69,12 @@ export async function SiteFooter() {
 
           <a
             href={CONTACT.phoneHref}
-            className="font-mono text-[19px] font-bold tabular-nums transition-colors hover:text-brand-teal"
+            className="inline-flex items-center gap-2.5 transition-colors hover:text-brand-teal"
           >
-            {CONTACT.phoneDisplay}
+            <Phone className="size-[18px] shrink-0" />
+            <span className="font-mono text-[19px] font-bold tabular-nums">
+              {CONTACT.phoneDisplay}
+            </span>
           </a>
 
           <address className="mt-2.5 text-sm leading-relaxed text-white/60 not-italic">
@@ -96,7 +100,7 @@ export async function SiteFooter() {
 
           <Link
             href="/contact"
-            className="mt-4 flex h-[46px] items-center justify-center rounded-xl bg-success-line font-bold text-white transition-[filter] hover:brightness-105"
+            className="mt-4 flex h-[46px] items-center justify-center rounded-xl border border-white/15 bg-white/10 font-bold text-white transition-colors hover:bg-white/20"
           >
             ติดต่อเรา
           </Link>
