@@ -36,7 +36,10 @@ export function VisitorsChart({ daily }: { daily: DayBucket[] }) {
           return (
             <div
               key={d.day}
-              className="group relative flex h-full flex-1 items-end"
+              // Capped so a range with only a day or two renders as bars rather
+              // than one slab stretched across the whole card. At 30 days each
+              // column is already narrower than the cap, so it never binds.
+              className="group relative flex h-full max-w-[44px] flex-1 items-end"
             >
               <div
                 className="w-full rounded-t-[4px] bg-brand-blue/85 transition-colors group-hover:bg-brand-blue"
@@ -59,7 +62,8 @@ export function VisitorsChart({ daily }: { daily: DayBucket[] }) {
         {daily.map((d, i) => (
           <div
             key={d.day}
-            className="min-w-0 flex-1 text-center text-[10px] text-muted-foreground"
+            // Same cap as the bars above so labels stay under their column.
+            className="min-w-0 max-w-[44px] flex-1 text-center text-[10px] text-muted-foreground"
           >
             {i % labelEvery === 0 ? shortDay(d.day) : " "}
           </div>

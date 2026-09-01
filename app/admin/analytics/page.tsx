@@ -163,7 +163,7 @@ function ChangeChip({
   if (change === null) {
     return (
       <span className="text-[12px] text-muted-foreground">
-        ไม่มีข้อมูล{compareLabel}
+        ไม่มีข้อมูล {compareLabel}
       </span>
     );
   }
@@ -183,7 +183,7 @@ function ChangeChip({
         {change > 0 ? "+" : ""}
         {change}%
       </span>
-      <span className="text-muted-foreground">เทียบ{compareLabel}</span>
+      <span className="text-muted-foreground">เทียบ {compareLabel}</span>
     </span>
   );
 }
