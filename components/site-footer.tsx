@@ -9,7 +9,9 @@ export async function SiteFooter() {
   // Read from the database rather than a hardcoded list — the previous one had
   // gone stale and four of its five links pointed at categories that no longer
   // exist, landing visitors on an empty product page.
-  const categories = await getCategories();
+  // Capped at five to keep the column short; `sort` is admin-controlled, so
+  // reordering categories decides which five appear here.
+  const categories = (await getCategories()).slice(0, 5);
 
   return (
     <footer className="mt-5 bg-ink text-white">
@@ -31,7 +33,7 @@ export async function SiteFooter() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label={`Facebook ${CONTACT.facebookName}`}
-              className="flex size-[42px] items-center justify-center rounded-[11px] bg-white/10 transition-colors hover:bg-white/20"
+              className="flex size-[42px] items-center justify-center rounded-[11px] bg-facebook text-white transition-[filter] hover:brightness-105"
             >
               <FacebookMark />
             </a>
