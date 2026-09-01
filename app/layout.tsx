@@ -9,6 +9,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { MobileBottomBar } from "@/components/mobile-bottom-bar";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthSessionProvider } from "@/components/session-provider";
+import { PageViewTracker } from "@/components/analytics/page-view-tracker";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -47,6 +48,7 @@ export default function RootLayout({
             <MobileBottomBar />
             <CartDrawer />
             <Toaster />
+            <PageViewTracker />
           </CartProvider>
         </AuthSessionProvider>
       </body>
