@@ -26,14 +26,24 @@ export function ShopStatusPanel({ initialNow }: { initialNow: number }) {
 
   return (
     <div className="overflow-hidden rounded-[22px] border border-line bg-card shadow-[0_10px_30px_rgba(14,27,42,.06)]">
-      {/* Deep blue banner; the state reads through the heading and the dot —
-          brand teal when the shop is open, plain white when it is not. */}
-      <div className="sv-dots-light relative overflow-hidden bg-ink p-6">
-        {/* Blue glow so the panel reads as navy rather than near-black,
-            echoing the radial washes used on the storefront hero. */}
+      {/* The banner carries the state outright: deep green while the shop is
+          open, navy once it has closed. Both are a dark base lifted by a
+          radial glow, the same treatment the storefront hero uses. */}
+      <div
+        className={cn(
+          "sv-dots-light relative overflow-hidden p-6 transition-colors",
+          isOpen ? "bg-[#05301f]" : "bg-ink"
+        )}
+      >
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(125%_150%_at_88%_-25%,rgba(47,107,255,.62),rgba(47,107,255,.16)_45%,transparent_70%)]"
+          className={cn(
+            "pointer-events-none absolute inset-0",
+            isOpen
+              ? // LINE green, the palette's existing green
+                "bg-[radial-gradient(125%_150%_at_88%_-25%,rgba(6,199,85,.55),rgba(6,199,85,.14)_45%,transparent_70%)]"
+              : "bg-[radial-gradient(125%_150%_at_88%_-25%,rgba(47,107,255,.62),rgba(47,107,255,.16)_45%,transparent_70%)]"
+          )}
         />
 
         <div className="relative">
