@@ -64,3 +64,6 @@ Desktop.ini
 .idea/
 *.swp
 *~
+
+# local scratch diagrams (not part of the app)
+/userflow.svg
