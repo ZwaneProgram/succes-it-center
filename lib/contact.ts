@@ -7,13 +7,11 @@ export const CONTACT = {
   // E.164 so the link dials correctly from a mobile abroad.
   phoneHref: "tel:+6653404769",
 
-  lineId: "@successitcenter",
-  // TODO: replace with the real LINE official account link
-  lineUrl: "https://line.me/R/ti/p/@successit",
+  lineId: "@SUCCESSITCENTER",
+  lineUrl: "https://line.me/R/ti/p/@successitcenter",
 
   facebookName: "SUCCESS IT CENTER",
-  // TODO: replace with the real Facebook page URL
-  facebookUrl: "https://facebook.com/successit",
+  facebookUrl: "https://www.facebook.com/successitcctv?locale=th_TH",
 
   addressLines: [
     "ชั้น 2 ตึกคอมพิวเตอร์ซิตี้ (ห้อง B216-B217)",
@@ -21,11 +19,16 @@ export const CONTACT = {
   ],
 } as const;
 
-/** Searched rather than pinned by coordinates, so no Maps API key is needed. */
-const MAP_QUERY = "ตึกคอมพิวเตอร์ซิตี้ ถนนมณีนพรัตน์ เชียงใหม่";
+/**
+ * Pinned by coordinates rather than a text search so the marker lands on the
+ * shop itself, and so no Maps API key is needed. Taken from the shop's own
+ * Google listing (maps.app.goo.gl/MFmGykri7GH2XJ7JA).
+ */
+const MAP_COORDS = "18.7960922,98.9796495";
 
-export const MAP_EMBED_URL = `https://www.google.com/maps?q=${encodeURIComponent(MAP_QUERY)}&hl=th&z=17&output=embed`;
-export const MAP_LINK_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(MAP_QUERY)}`;
+export const MAP_EMBED_URL = `https://www.google.com/maps?q=${MAP_COORDS}&hl=th&z=17&output=embed`;
+/** Opens turn-by-turn directions, which is what the button offers. */
+export const MAP_LINK_URL = `https://www.google.com/maps/dir/?api=1&destination=${MAP_COORDS}`;
 
 /** Index 0 is Sunday. Mon–Fri 08:30–17:30, Sat 09:30–17:30, closed Sunday. */
 export const OPENING_HOURS: WeekHours = [

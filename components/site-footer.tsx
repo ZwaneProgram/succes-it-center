@@ -38,7 +38,7 @@ export function SiteFooter() {
               rel="noopener noreferrer"
               className="flex h-[42px] items-center rounded-[11px] bg-success-line px-4 font-semibold"
             >
-              LINE @successit
+              LINE {CONTACT.lineId}
             </a>
           </div>
         </div>
