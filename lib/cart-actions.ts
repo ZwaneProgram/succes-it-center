@@ -79,6 +79,7 @@ export type DetailedCartItem = {
   name: string;
   price: number;
   qty: number;
+  image: string | null;
 };
 
 export async function getCartDetailed(): Promise<DetailedCartItem[]> {
@@ -94,5 +95,6 @@ export async function getCartDetailed(): Promise<DetailedCartItem[]> {
     name: r.product.name,
     price: r.product.price,
     qty: r.qty,
+    image: r.product.imageUrl,
   }));
 }

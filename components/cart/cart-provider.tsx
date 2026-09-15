@@ -19,6 +19,8 @@ export interface CartItem {
   name: string;
   price: number;
   qty: number;
+  /** Product thumbnail; null when the product has no image. */
+  image: string | null;
 }
 
 interface CartContextValue {
@@ -29,7 +31,10 @@ interface CartContextValue {
   open: boolean;
   setOpen: (open: boolean) => void;
   toggle: () => void;
-  add: (product: Pick<DecoratedProduct, "id" | "displayName" | "price">, qty?: number) => void;
+  add: (
+    product: Pick<DecoratedProduct, "id" | "displayName" | "price" | "imageUrl">,
+    qty?: number
+  ) => void;
   changeQty: (id: number, delta: number) => void;
   remove: (id: number) => void;
 }
@@ -50,7 +55,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (authed) return;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      setItems(raw ? JSON.parse(raw) : []);
+      // Carts saved before thumbnails existed have no `image` key.
+      const saved: CartItem[] = raw ? JSON.parse(raw) : [];
+      setItems(saved.map((i) => ({ ...i, image: i.image ?? null })));
     } catch {
       setItems([]);
     }
@@ -92,7 +99,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [authed]);
 
   const add = React.useCallback(
-    (product: Pick<DecoratedProduct, "id" | "displayName" | "price">, qty = 1) => {
+    (
+      product: Pick<DecoratedProduct, "id" | "displayName" | "price" | "imageUrl">,
+      qty = 1
+    ) => {
       if (authed) {
         addToCart(product.id, qty).then(() => getCartDetailed().then(setItems));
       } else {
@@ -105,7 +115,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           }
           return [
             ...prev,
-            { id: product.id, name: product.displayName, price: product.price, qty },
+            {
+              id: product.id,
+              name: product.displayName,
+              price: product.price,
+              qty,
+              image: product.imageUrl ?? null,
+            },
           ];
         });
       }
