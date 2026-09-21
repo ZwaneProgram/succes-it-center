@@ -32,13 +32,16 @@ export default async function AdminProductsPage() {
       ) : (
         <div className="overflow-hidden rounded-2xl border border-line bg-card">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-sm">
+            {/* `table-fixed` + explicit column widths: without it the nowrap
+                product names set the column's min-content width, the table
+                outgrows the card, and the actions column gets scrolled off. */}
+            <table className="w-full min-w-[700px] table-fixed text-sm">
               <thead>
                 <tr className="border-b border-line bg-surface text-left text-[13px] font-semibold text-muted-foreground">
                   <th className="p-4 font-semibold">สินค้า</th>
-                  <th className="p-4 font-semibold">ประเภท</th>
-                  <th className="p-4 font-semibold text-right">ราคา</th>
-                  <th className="p-4" />
+                  <th className="w-[220px] p-4 font-semibold">ประเภท</th>
+                  <th className="w-[120px] p-4 font-semibold text-right">ราคา</th>
+                  <th className="w-[140px] p-4" />
                 </tr>
               </thead>
               <tbody>
@@ -72,7 +75,7 @@ export default async function AdminProductsPage() {
                             {p.ai && <Badge variant="ai">AI</Badge>}
                           </div>
                           {p.subName && (
-                            <span className="truncate text-xs text-muted-foreground">
+                            <span className="block truncate text-xs text-muted-foreground">
                               {p.subName}
                             </span>
                           )}
@@ -80,7 +83,9 @@ export default async function AdminProductsPage() {
                       </div>
                     </td>
                     <td className="p-4">
-                      <Badge variant="outline">{p.typeLabel}</Badge>
+                      <Badge variant="outline" className="max-w-full truncate">
+                        {p.typeLabel}
+                      </Badge>
                     </td>
                     <td className="p-4 text-right font-semibold tabular-nums text-ink">
                       {formatBaht(p.price)}
