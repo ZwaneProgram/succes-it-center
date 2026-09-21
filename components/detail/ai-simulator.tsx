@@ -12,13 +12,43 @@ import { cn } from "@/lib/utils";
 interface Placement {
   x: number;
   y: number;
+  /** English label — the only version the image model is ever prompted with. */
   position: string;
   reason: string;
+  /** Thai versions for display. Null when the model skipped them. */
+  positionTh?: string | null;
+  reasonTh?: string | null;
+  /** Where the analysis originally put this marker, so we can tell it moved. */
+  srcX: number;
+  srcY: number;
 }
 
+/** /api/analyze knows nothing about srcX/srcY — the client adds those. */
+type AnalyzedPlacement = Omit<Placement, "srcX" | "srcY">;
+
 interface AnalyzeSuccess {
-  placements: Placement[];
+  placements: AnalyzedPlacement[];
 }
+
+interface DescribeSuccess {
+  position: string;
+  positionTh: string | null;
+  reason: string | null;
+  reasonTh: string | null;
+  warning: string | null;
+  warningTh: string | null;
+}
+
+/** A marker counts as moved once it is more than this far from the suggestion. */
+const MOVED_THRESHOLD = 2;
+
+const hasMoved = (p: Placement) =>
+  Math.abs(p.x - p.srcX) > MOVED_THRESHOLD ||
+  Math.abs(p.y - p.srcY) > MOVED_THRESHOLD;
+
+/** What to show the user: Thai when the model gave it, English otherwise. */
+const label = (p: Placement) => p.positionTh ?? p.position;
+const detail = (p: Placement) => p.reasonTh ?? p.reason;
 
 interface GenerateSuccess {
   generatedImage: string;
@@ -31,6 +61,7 @@ type AiState =
   | "uploaded"
   | "analyzing"
   | "placements"
+  | "describing"
   | "generating"
   | "result"
   | "error";
@@ -40,6 +71,7 @@ const STATUS_LABEL: Record<AiState, string> = {
   uploaded: "อัปโหลดรูปแล้ว พร้อมวิเคราะห์",
   analyzing: "AI กำลังวิเคราะห์…",
   placements: "เลือกตำแหน่งที่ต้องการ",
+  describing: "AI กำลังอ่านตำแหน่งใหม่…",
   generating: "AI กำลังสร้างภาพจำลอง…",
   result: "สร้างภาพจำลองเสร็จแล้ว",
   error: "เกิดข้อผิดพลาด",
@@ -60,11 +92,18 @@ export const AiSimulator = React.forwardRef<
   const [file, setFile] = React.useState<File | null>(null);
   // data-URL of the uploaded image for display
   const [preview, setPreview] = React.useState<string | null>(null);
+  // Natural aspect ratio (w/h) of the uploaded photo. The marker layer must be
+  // shaped exactly like the photo: the AI returns x/y as percentages of the
+  // FULL image, so any crop would shift every marker off its real spot.
+  const [aspect, setAspect] = React.useState<number | null>(null);
 
   const [placements, setPlacements] = React.useState<Placement[]>([]);
   const [selected, setSelected] = React.useState<number | null>(null); // index 0-2
   const [generatedImage, setGeneratedImage] = React.useState<string | null>(null);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
+  // Set when the re-read says the chosen spot breaks a mounting rule. It warns
+  // but never blocks — the user dragged the marker there on purpose.
+  const [spotWarning, setSpotWarning] = React.useState<string | null>(null);
   // Full-screen image preview (lightbox). Holds the URL to show, or null.
   const [lightbox, setLightbox] = React.useState<string | null>(null);
   // Landscape toggle (mobile) — rotates the lightbox image 90° so it fills
@@ -98,10 +137,12 @@ export const AiSimulator = React.forwardRef<
     setState("idle");
     setFile(null);
     setPreview(null);
+    setAspect(null);
     setPlacements([]);
     setSelected(null);
     setGeneratedImage(null);
     setErrorMsg(null);
+    setSpotWarning(null);
     // Reset file input so same file can be re-selected
     if (fileRef.current) fileRef.current.value = "";
   };
@@ -128,7 +169,18 @@ export const AiSimulator = React.forwardRef<
 
     const reader = new FileReader();
     reader.onload = (ev) => {
-      setPreview(ev.target?.result as string);
+      const dataUrl = ev.target?.result as string;
+      // Measure the real dimensions before showing it, so the marker layer can
+      // adopt the photo's own shape instead of a hardcoded 4:3 crop.
+      const probe = new window.Image();
+      probe.onload = () => {
+        if (probe.naturalWidth > 0 && probe.naturalHeight > 0) {
+          setAspect(probe.naturalWidth / probe.naturalHeight);
+        }
+      };
+      probe.src = dataUrl;
+
+      setPreview(dataUrl);
       setFile(f);
       setState("uploaded");
     };
@@ -145,6 +197,8 @@ export const AiSimulator = React.forwardRef<
     try {
       const fd = new FormData();
       fd.append("image", file);
+      // The category drives where this device mounts — see lib/ai-placement.ts.
+      fd.append("category", product.type);
 
       const res = await fetch("/api/analyze", { method: "POST", body: fd });
       const json = (await res.json()) as Partial<AnalyzeSuccess> & { error?: string };
@@ -161,8 +215,10 @@ export const AiSimulator = React.forwardRef<
         return;
       }
 
-      setPlacements(pts);
+      // Keep each suggestion's original spot so a drag is detectable later.
+      setPlacements(pts.map((pt) => ({ ...pt, srcX: pt.x, srcY: pt.y })));
       setSelected(null);
+      setSpotWarning(null);
       setState("placements");
     } catch (err) {
       console.error("analyze fetch error:", err);
@@ -176,17 +232,79 @@ export const AiSimulator = React.forwardRef<
     if (!file || selected === null) return;
     const chosen = placements[selected];
     if (!chosen) return;
+    const index = selected;
+
+    setErrorMsg(null);
+    setSpotWarning(null);
+
+    // The suggestion's label describes where the AI first put the marker. Once
+    // the user drags it, that wording is stale — generating from it put the
+    // device back at the suggested spot. Re-read the real point instead.
+    let position = chosen.position;
+
+    if (hasMoved(chosen)) {
+      setState("describing");
+      try {
+        const fd = new FormData();
+        fd.append("image", file);
+        fd.append("category", product.type);
+        fd.append("x", String(chosen.x));
+        fd.append("y", String(chosen.y));
+
+        const res = await fetch("/api/describe", { method: "POST", body: fd });
+        const json = (await res.json()) as Partial<DescribeSuccess> & {
+          error?: string;
+        };
+
+        if (!res.ok || json.error || !json.position) {
+          console.error("describe error:", json.error ?? res.statusText);
+          showError(json.error ?? "อ่านตำแหน่งที่เลือกไม่สำเร็จ ลองอีกครั้ง");
+          return;
+        }
+
+        position = json.position;
+        const described = json;
+        setPlacements((prev) =>
+          prev.map((pt, i) =>
+            i === index
+              ? {
+                  ...pt,
+                  position: described.position!,
+                  positionTh: described.positionTh ?? null,
+                  reason: described.reason ?? pt.reason,
+                  reasonTh: described.reasonTh ?? null,
+                  // The re-read spot is the new baseline.
+                  srcX: pt.x,
+                  srcY: pt.y,
+                }
+              : pt
+          )
+        );
+        setSpotWarning(json.warningTh ?? json.warning ?? null);
+      } catch (err) {
+        console.error("describe fetch error:", err);
+        showError("ไม่สามารถเชื่อมต่อกับ AI ได้ กรุณาตรวจสอบการเชื่อมต่อ");
+        return;
+      }
+    }
 
     setState("generating");
-    setErrorMsg(null);
 
     try {
       const fd = new FormData();
       fd.append("image", file);
-      fd.append("selectedPosition", chosen.position);
+      fd.append("selectedPosition", position);
+      fd.append("category", product.type);
+      // The exact point backs up the words, wherever the marker ended up.
+      fd.append("x", String(chosen.x));
+      fd.append("y", String(chosen.y));
+      // The room photo's own shape. Without it the output canvas follows the
+      // product reference photo instead, and a canvas that disagrees with the
+      // room forces the model to re-shoot the room from a new viewpoint.
+      if (aspect) fd.append("aspect", String(aspect));
 
       // For AI-tagged products, pass the clean product reference shot (2nd
-      // image, plain bg) so the AI composites this exact camera into the room.
+      // image, plain bg) so the AI composites this exact unit into the room.
       if (product.ai) {
         const ref =
           product.images[1] ?? product.images[0] ?? product.imageUrl ?? null;
@@ -265,22 +383,38 @@ export const AiSimulator = React.forwardRef<
   const statusDot =
     state === "error"
       ? "#e5484d"
-      : state === "analyzing" || state === "generating"
+      : state === "analyzing" ||
+          state === "describing" ||
+          state === "generating"
         ? "#2F6BFF"
         : "#5EE7D3";
 
   // ---- Preview style helper ----
 
+  // Whole photo, never cropped — keeps marker percentages honest.
   const previewStyle: React.CSSProperties = preview
     ? {
         backgroundImage: `url(${preview})`,
-        backgroundSize: "cover",
+        backgroundSize: "contain",
         backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
       }
     : {
         background:
           "repeating-linear-gradient(45deg,#eef4f7,#eef4f7 12px,#e2ecf0 12px,#e2ecf0 24px)",
       };
+
+  // Fixed-size decorative thumbnail — cropping is fine here, no markers on it.
+  const thumbStyle: React.CSSProperties = preview
+    ? {
+        backgroundImage: `url(${preview})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }
+    : previewStyle;
+
+  /** Shape of the photo, falling back to 4:3 until it has been measured. */
+  const frameRatio = aspect ?? 4 / 3;
 
   // ---- Chosen placement (for result state) ----
   const chosenPlacement = selected !== null ? placements[selected] ?? null : null;
@@ -346,7 +480,7 @@ export const AiSimulator = React.forwardRef<
           {state === "uploaded" && (
             <div className="flex flex-wrap items-center gap-6">
               <div className="relative h-[150px] w-[200px] shrink-0 overflow-hidden rounded-[14px] border border-line">
-                <div className="absolute inset-0" style={previewStyle} />
+                <div className="absolute inset-0" style={thumbStyle} />
                 <span className="absolute bottom-2 left-2 rounded-md bg-white px-[7px] py-[3px] font-mono text-[11px] text-muted-foreground">
                   รูปที่อัปโหลด
                 </span>
@@ -395,14 +529,22 @@ export const AiSimulator = React.forwardRef<
                 เลือกตำแหน่งที่ต้องการติดตั้ง
               </div>
               <div className="mb-4 text-[13px] text-muted-foreground">
-                แตะเพื่อเลือก · ลากหมุดเพื่อปรับตำแหน่งบนภาพได้
+                แตะเพื่อเลือก · ลากหมุดไปไว้ตรงไหนก็ได้ตามต้องการ
+                ตำแหน่งที่ AI แนะนำเป็นเพียงคำแนะนำ — ถ้าคุณย้ายหมุด AI
+                จะอ่านจุดใหม่ที่คุณเลือกอีกครั้งก่อนสร้างภาพ
               </div>
 
               {/* Image with draggable markers */}
               <div
                 ref={imgWrapRef}
-                className="relative mb-5 w-full touch-none overflow-hidden rounded-[14px] border border-line"
-                style={{ aspectRatio: "4/3" }}
+                className="relative mx-auto mb-5 touch-none overflow-hidden rounded-[14px] border border-line"
+                // The box keeps the photo's exact shape so marker percentages
+                // stay true, but is capped by height as well as width — a tall
+                // portrait photo would otherwise run off the screen.
+                style={{
+                  aspectRatio: frameRatio,
+                  width: `min(100%, calc(68vh * ${frameRatio}))`,
+                }}
               >
                 <div className="absolute inset-0" style={previewStyle} />
                 {placements.map((p, i) => (
@@ -411,7 +553,7 @@ export const AiSimulator = React.forwardRef<
                     onPointerDown={(e) => onMarkerPointerDown(e, i)}
                     onPointerMove={(e) => onMarkerPointerMove(e, i)}
                     onPointerUp={(e) => onMarkerPointerUp(e, i)}
-                    title={p.position}
+                    title={label(p)}
                     className={cn(
                       "absolute flex size-8 -translate-x-1/2 -translate-y-1/2 touch-none items-center justify-center rounded-full border-2 border-white text-sm font-bold text-white shadow-lg transition-[box-shadow] cursor-grab active:cursor-grabbing active:scale-110",
                       selected === i ? "scale-110 ring-2 ring-white ring-offset-2" : ""
@@ -447,9 +589,18 @@ export const AiSimulator = React.forwardRef<
                       {i + 1}
                     </span>
                     <div>
-                      <div className="text-sm font-semibold text-ink">{p.position}</div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-ink">
+                          {label(p)}
+                        </span>
+                        {hasMoved(p) && (
+                          <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                            ย้ายแล้ว · AI จะอ่านจุดใหม่
+                          </span>
+                        )}
+                      </div>
                       <div className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                        {p.reason}
+                        {detail(p)}
                       </div>
                     </div>
                     {selected === i && (
@@ -458,6 +609,12 @@ export const AiSimulator = React.forwardRef<
                   </button>
                 ))}
               </div>
+
+              {spotWarning && (
+                <div className="mb-4 rounded-[12px] border border-[#f0c46a] bg-[#fff8e8] px-4 py-3 text-[13px] leading-relaxed text-[#8a5a00]">
+                  ⚠ {spotWarning}
+                </div>
+              )}
 
               <div className="flex flex-wrap gap-2.5">
                 <Button
@@ -471,6 +628,19 @@ export const AiSimulator = React.forwardRef<
                 <Button variant="soft" onClick={reset} className="h-12">
                   เปลี่ยนรูป
                 </Button>
+              </div>
+            </div>
+          )}
+
+          {/* ── DESCRIBING (marker was moved) ── */}
+          {state === "describing" && (
+            <div className="px-5 py-9 text-center">
+              <div className="mx-auto mb-[22px] size-[58px] animate-sv-spin rounded-full border-[5px] border-line border-t-brand-teal" />
+              <div className="mb-1.5 text-lg font-bold text-ink">
+                AI กำลังอ่านตำแหน่งใหม่…
+              </div>
+              <div className="text-sm text-muted-foreground">
+                คุณย้ายหมุดไปจุดใหม่ AI กำลังดูว่าตรงนั้นคืออะไรก่อนสร้างภาพ
               </div>
             </div>
           )}
@@ -502,7 +672,7 @@ export const AiSimulator = React.forwardRef<
                   <div
                     onClick={() => preview && setLightbox(preview)}
                     className="relative cursor-zoom-in overflow-hidden rounded-[14px] border border-line"
-                    style={{ aspectRatio: "4/3" }}
+                    style={{ aspectRatio: frameRatio }}
                   >
                     <div className="absolute inset-0" style={previewStyle} />
                   </div>
@@ -517,8 +687,7 @@ export const AiSimulator = React.forwardRef<
                     alt="ภาพจำลองตำแหน่งกล้องวงจรปิด"
                     onClick={() => setLightbox(generatedImage)}
                     title="คลิกเพื่อดูภาพขยาย"
-                    className="w-full cursor-zoom-in rounded-[14px] border-2 border-brand-teal object-cover"
-                    style={{ aspectRatio: "4/3" }}
+                    className="w-full cursor-zoom-in rounded-[14px] border-2 border-brand-teal"
                   />
                 </div>
               </div>
@@ -536,8 +705,10 @@ export const AiSimulator = React.forwardRef<
                       {selected !== null ? selected + 1 : 1}
                     </span>
                     <div>
-                      <div className="font-semibold">{chosenPlacement.position}</div>
-                      <div className="mt-0.5 text-muted-foreground">{chosenPlacement.reason}</div>
+                      <div className="font-semibold">{label(chosenPlacement)}</div>
+                      <div className="mt-0.5 text-muted-foreground">
+                        {detail(chosenPlacement)}
+                      </div>
                     </div>
                   </div>
                 </div>

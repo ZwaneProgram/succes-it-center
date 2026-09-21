@@ -1,36 +1,26 @@
 import OpenAI from "openai";
 import { NextRequest, NextResponse } from "next/server";
 
+import { buildAnalyzePrompt, placementProfile } from "@/lib/ai-placement";
+
 const client = new OpenAI({
   apiKey: process.env.OPENROUTER_API_KEY!,
   baseURL: "https://openrouter.ai/api/v1",
   defaultHeaders: {
     "HTTP-Referer": "http://localhost:3000",
-    "X-Title": "Security Camera Placement AI",
+    "X-Title": "Security Device Placement AI",
   },
 });
-
-const PROMPT = `Analyze this room photo. Identify exactly 3 possible positions to mount a dome CCTV camera on the wall near the ceiling.
-
-Return ONLY raw JSON (no markdown, no code fences):
-{
-  "placements": [
-    { "x": 15, "y": 10, "position": "Top-left corner above door", "reason": "Covers entrance and 70% of the room" },
-    { "x": 85, "y": 8, "position": "Top-right corner", "reason": "Diagonal coverage eliminates blind spots" },
-    { "x": 50, "y": 12, "position": "Center wall above window", "reason": "Monitors secondary entry points" }
-  ]
-}
-
-Rules:
-- x and y are percentages (0–100) from top-left of the image
-- Place markers near ceiling level (y typically 5–20%) along walls
-- Return exactly 3 options covering different coverage zones`;
 
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const file = formData.get("image") as File;
+    // Category slug (= Product.type) decides where this device actually mounts.
+    const category = (formData.get("category") as string) || null;
     if (!file) return NextResponse.json({ error: "No image provided" }, { status: 400 });
+
+    const profile = placementProfile(category);
 
     const bytes = await file.arrayBuffer();
     const base64 = Buffer.from(bytes).toString("base64");
@@ -42,10 +32,12 @@ export async function POST(req: NextRequest) {
         role: "user",
         content: [
           { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64}` } },
-          { type: "text", text: PROMPT },
+          { type: "text", text: buildAnalyzePrompt(profile) },
         ],
       }],
-      max_tokens: 1500,
+      // Headroom: this model spends part of the budget on reasoning tokens
+      // before emitting the JSON, and 1500 truncated it mid-object.
+      max_tokens: 4000,
       response_format: { type: "json_object" },
     });
 

@@ -1,11 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import {
+  buildGeneratePrompt,
+  placementProfile,
+  snapAspectRatio,
+} from "@/lib/ai-placement";
+
 const OR_KEY = process.env.OPENROUTER_API_KEY!;
+// Which image-edit model composites the device into the room photo.
+// Override with IMAGE_MODEL to A/B without a redeploy. Known-good options:
+//
+// Prices below are OpenRouter's IMAGE OUTPUT rate, which dominates the cost of
+// a generation. Do not compare models on their prompt/input rate — that reads
+// backwards (gemini-3-pro-image is $2/M in but $120/M out).
+//
+//   google/gemini-3-pro-image      CURRENT DEFAULT. The only model tested that
+//                                  edits the photo instead of re-shooting it —
+//                                  holds the crop, geometry, lighting, artwork
+//                                  and the dooDeco watermark. $120/M out
+//                                  (~$0.13 an image), the priciest, worth it.
+//   google/gemini-3.1-flash-image  Flash tier, $60/M out. Newer gen than Pro.
+//
+//   Tested and rejected — every OpenAI image model RE-SHOOTS the room rather
+//   than editing it (new canvas shape, re-zoomed, artwork redrawn, watermark
+//   lost). They have no aspect_ratio knob to anchor the canvas, so the prompt
+//   alone cannot hold the frame. Do not use these for the placement simulator:
+//   openai/gpt-5-image             OpenAI flagship, $40/M out.
+//   openai/gpt-5.4-image-2         Newer OpenAI gen, $30/M out.
+//   openai/gpt-5-image-mini        OpenAI cheap tier, $8/M out.
+//   google/gemini-2.5-flash-image  The original default. Re-synthesised the whole
+//                                  frame instead of editing it — do not use.
+const IMAGE_MODEL = process.env.IMAGE_MODEL || "google/gemini-3-pro-image";
+
+// aspect_ratio lives under Gemini's own image_config knob. OpenAI's image models
+// reject unknown body params, so this must only go out to Google's models.
+const SUPPORTS_IMAGE_CONFIG = IMAGE_MODEL.startsWith("google/");
 const OR_HEADERS = {
   Authorization: `Bearer ${OR_KEY}`,
   "Content-Type": "application/json",
   "HTTP-Referer": "http://localhost:3000",
-  "X-Title": "Security Camera Placement AI",
+  "X-Title": "Security Device Placement AI",
 };
 
 export async function POST(req: NextRequest) {
@@ -14,8 +48,19 @@ export async function POST(req: NextRequest) {
     const file = formData.get("image") as File;
     const selectedPosition = formData.get("selectedPosition") as string;
     // Optional: a clean product reference shot (2nd product image, plain bg) so
-    // the AI composites the exact camera model instead of a generic dome.
+    // the AI composites the exact model instead of a generic stand-in.
     const productImageUrl = (formData.get("productImageUrl") as string) || null;
+    // Category slug (= Product.type) decides where this device actually mounts.
+    const category = (formData.get("category") as string) || null;
+    // Where the marker actually sits, as image percentages. Backs up the words
+    // in selectedPosition when the user has dragged the marker themselves.
+    const px = Number(formData.get("x"));
+    const py = Number(formData.get("y"));
+    const point =
+      Number.isFinite(px) && Number.isFinite(py) ? { x: px, y: py } : null;
+    // The uploaded photo's own width/height, measured in the browser. Without
+    // it the model invents a canvas and re-shoots the room to fill it.
+    const aspectRatio = snapAspectRatio(Number(formData.get("aspect")));
     if (!file) return NextResponse.json({ error: "No image provided" }, { status: 400 });
 
     const bytes = await file.arrayBuffer();
@@ -23,13 +68,13 @@ export async function POST(req: NextRequest) {
     const mimeType = file.type || "image/jpeg";
     const dataUrl = `data:${mimeType};base64,${base64}`;
 
-    const imagePrompt = productImageUrl
-      ? `You are EDITING the FIRST image (a room photo), not creating a new image. The SECOND image shows the exact CCTV camera product to add. ` +
-        `Return the FIRST image EXACTLY as-is — identical room, furniture, layout, wall positions, colors, lighting, and camera angle — with only ONE change: mount one copy of the camera from the SECOND image on the wall or ceiling near ${selectedPosition}. ` +
-        `The added camera must be clearly visible and in focus, at a realistic real-world size (about the size of an actual CCTV camera — not tiny), matching the shape and color of the product in the second image, with shadows and lighting consistent with the room. ` +
-        `Do NOT redraw, re-render, mirror, restyle, rearrange, or change the room or its perspective in any way. Composite only the single camera into the existing photo. Photorealistic.`
-      : `You are EDITING this room photo, not creating a new image. Add exactly 1 realistic white dome CCTV security camera mounted on the wall or ceiling near ${selectedPosition}. ` +
-        `The camera must be clearly visible, in focus, and at a realistic real-world size. Keep EVERYTHING else completely identical — same furniture, floor, walls, colors, lighting, shadows, and perspective. Do NOT re-render or change the room. Only add the single camera. Photorealistic result.`;
+    const profile = placementProfile(category);
+    const imagePrompt = buildGeneratePrompt(
+      profile,
+      selectedPosition,
+      Boolean(productImageUrl),
+      point
+    );
 
     const content: Array<
       | { type: "text"; text: string }
@@ -43,22 +88,31 @@ export async function POST(req: NextRequest) {
       content.push({ type: "image_url", image_url: { url: productImageUrl } });
     }
 
-    // Gemini "Nano Banana" returns images via the CHAT endpoint in message.images[],
-    // NOT the /images endpoint. Request the image modality explicitly.
+    // Gemini's image models return images via the CHAT endpoint in
+    // message.images[], NOT the /images endpoint. Request the modality explicitly.
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: OR_HEADERS,
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
+        model: IMAGE_MODEL,
         modalities: ["image", "text"],
         messages: [{ role: "user", content }],
+        // Gemini's own image knob. OpenRouter does not list it under these
+        // models' supported_parameters, but passes it through to the provider.
+        // Without it the model invents a canvas and re-shoots the room to fill
+        // it. OpenAI models get no equivalent — the prompt has to carry it.
+        ...(aspectRatio && SUPPORTS_IMAGE_CONFIG
+          ? { image_config: { aspect_ratio: aspectRatio } }
+          : {}),
       }),
     });
 
     const text = await res.text();
     if (!res.ok) {
       return NextResponse.json(
-        { error: `Image generation failed (${res.status}): ${text.slice(0, 400)}` },
+        {
+          error: `Image generation failed for ${IMAGE_MODEL} (${res.status}): ${text.slice(0, 400)}`,
+        },
         { status: 500 }
       );
     }
@@ -92,14 +146,14 @@ export async function POST(req: NextRequest) {
     }
 
     if (!generatedImage) {
-      console.error("No image in Gemini response:", text.slice(0, 800));
+      console.error(`No image in ${IMAGE_MODEL} response:`, text.slice(0, 800));
       return NextResponse.json(
         { error: `No image returned. Response preview: ${text.slice(0, 300)}` },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ generatedImage });
+    return NextResponse.json({ generatedImage, model: IMAGE_MODEL });
   } catch (err: unknown) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
